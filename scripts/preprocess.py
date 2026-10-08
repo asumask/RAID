@@ -9,6 +9,7 @@ from raid.data.preprocessing import extract_variable, reproject_800m_to_160m, sa
 from raid.data.file_utils import list_files, get_paired_dates, _extract_date, daily_filename
 
 ## create source files with same coordinates
+## CUDA_VISIBLE_DEVICES=0
 ## python3 scripts/preprocess.py --config /home/a22740/asumak/gitlab/raid/configs/base.yaml
 
 

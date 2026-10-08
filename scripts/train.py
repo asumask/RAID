@@ -10,7 +10,7 @@ from raid.trainer import fit
 
 # usage: python3 scripts/train.py --config /home/a22740/asumak/gitlab/raid/configs/step1a_cnn.yaml --epochs 50
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --overfit_batch
-
+""
 
 def parse_args():
     parser = argparse.ArgumentParser()
