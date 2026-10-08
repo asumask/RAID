@@ -47,12 +47,13 @@ def main():
         ds_160m= set_rho_variables(ds_160m, "160m")
 
         for name in input_vars:
-            arr = reproject_800m_to_160m(ds_800m, ds_160m, name, levels.get(name, -1), method="cubic")
+            arr = reproject_800m_to_160m(ds_800m, ds_160m, name, levels.get(name, -1), method="linear")
             np.save(out_800m / daily_filename(name, date), arr)
 
         for name in target_vars:
             arr = extract_variable(ds_160m, "160m", name, levels.get(name, -1))
             np.save(out_160m / daily_filename(name, date), arr.values.astype(np.float32))
+    
     
     out_static = root / "static"
     out_static.mkdir(parents=True, exist_ok=True)
@@ -64,7 +65,7 @@ def main():
     stats = compute_stats(out_160m, target_vars, train_years)
     stats.update(compute_stats(out_800m, input_only, train_years))
     np.savez(out_static / "preprocessing_stats.npz", **stats)
-   
+    
 
 
 if __name__ == "__main__":
