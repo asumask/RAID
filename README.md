@@ -43,7 +43,31 @@ Use the built-in continuous integration in GitLab.
 * [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
 
 ***
+# Data
 
+## Processed data (data/processed/)
+
+- 800m/, 160m/: daily surface temperature, one file per day (YYYYMMDD.npy)
+- Units: °C, NOT normalized
+- 800m files: reprojected to the 160m grid, cropped to the
+  NorFjords extent, interpolated (<method>) to 160m resolution
+- Land cells: <NaN / fill value>; land mask in <file>, 1 = sea, 0 = land
+
+## Normalization
+- mean/std stored in <file>.npz (keys: <...>)
+- computed from sea cells in the training period only
+- applied in Dataset at load time; model outputs are converted
+  back to °C before computing metrics
+
+## Train/val/test split
+- by date range, defined in configs/base.yaml
+
+## Metrics
+- RMSE etc. over sea cells only, in °C
+- baseline = interpolated 800m vs 160m
+
+
+***
 # Editing this README
 
 When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
