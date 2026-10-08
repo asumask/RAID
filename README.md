@@ -47,7 +47,7 @@ Use the built-in continuous integration in GitLab.
 
 ## Processed data (data/processed/)
 
-- 800m/, 160m/: daily surface temperature, one file per day (YYYYMMDD.npy)
+- 800m/, 160m/: daily surface temperature, one file per day (YYYYMMDD_temp.npy)
 - Units: °C, NOT normalized
 - 800m files: reprojected to the 160m grid, cropped to the
   NorFjords extent, interpolated (<method>) to 160m resolution
