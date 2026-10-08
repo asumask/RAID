@@ -54,7 +54,7 @@ Use the built-in continuous integration in GitLab.
 - Land cells: <NaN / fill value>; land mask in <file>, 1 = sea, 0 = land
 
 ## Normalization
-- mean/std stored in <file>.npz (keys: <...>)
+- mean/std stored in <file>.npz (keys: <mean, std>)
 - computed from sea cells in the training period only
 - applied in Dataset at load time; model outputs are converted
   back to °C before computing metrics
