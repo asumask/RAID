@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+ 
+# Virtual environment
+.venv/
+venv/
+ 
+# Data (large files; keep on the shared project folder instead)
+data/**
+!data/processed/
+!data/processed/static/
+!data/processed/static/preprocessing_stats.npz
+!data/processed/static/landmask.npy
+!data/processed/static/preprocessing_stats.npz
+
+ 
+# Training outputs
+experiments/
+checkpoints/
+runs/
+wandb/
+*.pt
+*.pth
+*.ckpt
+ 
+# Jupyter
+.ipynb_checkpoints/
+ 
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+ 
+

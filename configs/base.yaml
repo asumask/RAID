@@ -1,0 +1,27 @@
+data:
+  raw_800m:
+    path: /data/osea/s3-osea/Norkyst/avg
+    location_name: norkyst
+    resolution_tag: 800m
+  raw_160m:
+    path: /data/osea/s3-osea/Norfjords/A04_v3/avg
+    location_name: norfjords
+    resolution_tag: 160m
+
+  processed_dir: data/processed
+
+  input_vars: [temp]                    # from 800m, reprojected onto the 160m grid
+  target_vars: [temp]                   # from 160m
+  static_inputs: [bathymetry, land_mask]
+
+  ## vertical level index into s_rho / s_w; variables not listed default to -1 (surface).
+  ## ignored for 2D variables (e.g. zeta).
+  levels:
+    temp: -1
+
+split:
+  train:
+    years: [2023, 2024, 2025]
+  val:
+    years: [2026]
+
