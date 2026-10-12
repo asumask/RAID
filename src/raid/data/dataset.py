@@ -62,12 +62,13 @@ class DownscalingDataset(Dataset):
     Land cells are set to 0 in x and y.
     """
 
-    def __init__(self, cfg, years, patch_size=None, stats=None):
+    def __init__(self, cfg, years, patch_size=None, crops_per_day=20, stats=None):
         root = Path(cfg.data.processed_dir)
         self.dir_800m = root / "800m_on_160m_grid"
         self.dir_160m = root / "160m"
         static_dir = root / "static"
         self.patch_size = patch_size
+        self.crops_per_day = crops_per_day
 
         self.input_vars = cfg.data.input_vars
         self.target_vars = cfg.data.target_vars
@@ -90,10 +91,11 @@ class DownscalingDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.dates)
+        return len(self.dates) * (self.crops_per_day if self.patch_size else 1)
+
 
     def __getitem__(self, idx):
-        date = self.dates[idx]
+        date = self.dates[idx % len(self.dates)]
 
         x = np.stack([self._load(self.dir_800m, v, date) for v in self.input_vars])
         y = np.stack([self._load(self.dir_160m, v, date) for v in self.target_vars])

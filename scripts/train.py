@@ -8,7 +8,8 @@ from raid.data.dataset import build_dataloaders
 from raid.models.cnn import SimpleSRCNN
 from raid.trainer import fit
 
-# usage: python3 scripts/train.py --config /home/a22740/asumak/gitlab/raid/configs/step1a_cnn.yaml 
+# usage: CUDA_VISIBLE_DEVICES=1 
+#        python3 scripts/train.py --config /home/a22740/asumak/gitlab/raid/configs/step1a_cnn.yaml 
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2025 --output_dir 
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2024 --output_dir 
 
