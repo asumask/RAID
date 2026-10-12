@@ -12,7 +12,7 @@ data:
 
   input_vars: [temp]                    # from 800m, reprojected onto the 160m grid
   target_vars: [temp]                   # from 160m
-  static_inputs: [bathymetry, land_mask]
+  static_inputs: [bathymetry, land_mask, distance_to_coast]
 
   ## vertical level index into s_rho / s_w; variables not listed default to -1 (surface).
   ## ignored for 2D variables (e.g. zeta).
@@ -21,15 +21,20 @@ data:
 
 split:
   train:
-    years: [2023, 2024, 2025]
+    years: [2023, 2024]         # default (no --fold) = same as fold val2025
   val:
-    years: [2026]
+    years: [2025]
+  test:
+    years: [2026]               # never touched during training/CV
+  folds:                        # selected with --fold; 2023 = Dec 2023 only, always in train
+    val2025: {train: [2023, 2024], val: [2025]}
+    val2024: {train: [2023, 2025], val: [2024]}
 
 model:
   name: cnn
-  in_channels: 3
+  in_channels: 4        # len(input_vars) + len(static_inputs)
   hidden_dim: 64
-  n_blocks: 8  #4 (default)
+  n_blocks: 4  
 
 train:
   patch_size: 256      # random crops for training; omit to train on the full 961x1441 grid

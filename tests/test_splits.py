@@ -8,7 +8,8 @@ import pytest
 import yaml
 
 from raid.data.dataset import DownscalingDataset
-from raid.trainer import dict_to_namespace
+from raid.data.file_utils import daily_filename
+from raid.config import dict_to_namespace
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = sorted((ROOT / "configs").glob("*.yaml"))
@@ -20,7 +21,8 @@ def load_cfg(path):
 
 @pytest.mark.parametrize("config_path", CONFIGS, ids=lambda p: p.name)
 def test_split_years_in_config_dont_overlap(config_path):
-    splits = {name: set(s["years"]) for name, s in load_cfg(config_path)["split"].items()}
+    splits = {name: set(s["years"]) for name, s in load_cfg(config_path)["split"].items()
+              if name != "folds"}
 
     for name, years in splits.items():
         assert years, f"split '{name}' has no years"
@@ -28,21 +30,33 @@ def test_split_years_in_config_dont_overlap(config_path):
         assert not ya & yb, f"splits '{a}' and '{b}' share years {sorted(ya & yb)}"
 
 
+@pytest.mark.parametrize("config_path", CONFIGS, ids=lambda p: p.name)
+def test_cv_folds_dont_overlap_or_touch_test_years(config_path):
+    split = load_cfg(config_path)["split"]
+    test_years = set(split.get("test", {}).get("years", []))
+
+    for name, fold in split.get("folds", {}).items():
+        train, val = set(fold["train"]), set(fold["val"])
+        assert train and val, f"fold '{name}' has an empty train or val"
+        assert not train & val, f"fold '{name}' has years {sorted(train & val)} in both train and val"
+        assert not (train | val) & test_years, f"fold '{name}' uses test years {sorted((train | val) & test_years)}"
+
+
 def write_processed_dir(root, dates, var="temp", shape=(4, 5)):
     ## minimal processed layout read by DownscalingDataset, one file per day and resolution
     for sub in ("800m_on_160m_grid", "160m", "static"):
         (root / sub).mkdir(parents=True)
     for date in dates:
-        np.save(root / "800m_on_160m_grid" / f"{var}_{date}.npy", np.zeros(shape, np.float32))
-        np.save(root / "160m" / f"{var}_{date}.npy", np.zeros(shape, np.float32))
+        np.save(root / "800m_on_160m_grid" / daily_filename(var, date), np.zeros(shape, np.float32))
+        np.save(root / "160m" / daily_filename(var, date), np.zeros(shape, np.float32))
     np.save(root / "static" / "land_mask.npy", np.ones(shape, np.uint8))
     np.save(root / "static" / "bathymetry.npy", np.arange(1, 21, dtype=np.float32).reshape(shape))
-    np.savez(root / "static" / "preprocessing_stats.npz", **{f"{var}_mean": 0.0, f"{var}_std": 1.0})
 
 
 def test_datasets_for_each_split_have_disjoint_days(tmp_path):
     raw = load_cfg(ROOT / "configs" / "base.yaml")
-    all_years = sorted({y for s in raw["split"].values() for y in s["years"]})
+    splits = {name: s for name, s in raw["split"].items() if name != "folds"}
+    all_years = sorted({y for s in splits.values() for y in s["years"]})
     ## include year boundaries, where an off-by-one in year filtering would leak days
     dates = [f"{y}{md}" for y in all_years for md in ("0101", "0615", "1231")]
     write_processed_dir(tmp_path, dates, var=raw["data"]["input_vars"][0])
@@ -52,7 +66,7 @@ def test_datasets_for_each_split_have_disjoint_days(tmp_path):
     cfg = dict_to_namespace(raw)
 
     days = {}
-    for name, split in raw["split"].items():
+    for name, split in splits.items():
         days[name] = set(DownscalingDataset(cfg, split["years"]).dates)
         wrong = {d for d in days[name] if int(d[:4]) not in split["years"]}
         assert not wrong, f"split '{name}' picked days outside its years: {sorted(wrong)}"

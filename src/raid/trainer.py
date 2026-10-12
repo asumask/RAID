@@ -39,17 +39,3 @@ def fit(model, train_loader, val_loader, cfg, device):
             best = va
             torch.save(model.state_dict(), out / "best.pt")
 
-def overfit_one_batch(model, loader, cfg, device, steps=500):
-    x, y, mask = next(iter(loader))            # take ONE batch and keep it
-    x, y, mask = x.to(device), y.to(device), mask.to(device)
-    print(f"batch: x {tuple(x.shape)}, y {tuple(y.shape)}, sea fraction {mask.mean():.2f}")
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg.train.lr)
-    model.train()
-    for step in range(steps + 1):
-        optimizer.zero_grad()
-        loss = masked_mse(model(x), y, mask)
-        loss.backward()
-        optimizer.step()
-        if step % 20 == 0:
-            print(f"step {step:4d}  loss {loss.item():.6f}")

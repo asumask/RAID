@@ -15,19 +15,28 @@ REFERENCE_FILE_160M = "/data/osea/s3-osea/Norfjords/A04_v3/avg/2025/norfjords_16
 REFERENCE_FILE_800M = "/data/osea/s3-osea/Norkyst/avg/2025/norkyst_800m_avg.nc4_2025010112"
 
 
-## static input name -> variable in the 160m reference file
+def distance_to_coast(ds):
+    ## km from each sea cell to the nearest land cell (0 on land); the open domain edge is not coast
+    sea = ds["mask_rho"].values == 1
+    cell_km = float(ds["xi_rho"][1] - ds["xi_rho"][0]) / 1000
+    return ndimage.distance_transform_edt(sea) * cell_km
+
+
+## static input name -> (how to get it from the 160m reference file, dtype)
 STATIC_FIELDS = {
-    "bathymetry": ("h", np.float32),
-    "land_mask": ("mask_rho", np.uint8),
+    "bathymetry": (lambda ds: ds["h"].values, np.float32),
+    "land_mask": (lambda ds: ds["mask_rho"].values, np.uint8),
+    "distance_to_coast": (distance_to_coast, np.float32),
 }
 
 
 def save_static_fields(out_dir, names):
-    ## bathymetry and land mask are time-invariant, so take them from the reference grid
+    ## static fields are time-invariant, so take them from the reference grid.
+    ## land_mask is always saved: the dataset needs it for the loss mask
     ds = xr.open_dataset(REFERENCE_FILE_160M)
-    for name in names:
-        var, dtype = STATIC_FIELDS[name]
-        np.save(out_dir / f"{name}.npy", ds[var].values.astype(dtype))
+    for name in dict.fromkeys(["land_mask", *names]):
+        get, dtype = STATIC_FIELDS[name]
+        np.save(out_dir / f"{name}.npy", get(ds).astype(dtype))
 
 
 def compute_stats(data_dir, names, years):

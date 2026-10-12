@@ -17,33 +17,40 @@ def denormalize(arr, mean, std):
 
 
 def build_dataloaders(cfg):
-    train_dataset = DownscalingDataset(
-        cfg=cfg,
-        years=cfg.split.train.years,
-        patch_size=getattr(cfg.train, "patch_size", None),
-    )
-    val_dataset = DownscalingDataset(
-        cfg=cfg,
-        years=cfg.split.val.years,
-    )
+    ## normalisation stats come from this fold's training years only; val reuses them
+    train_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.train.years,
+                                       patch_size=getattr(cfg.train, "patch_size", None))
+    val_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.val.years,
+                                     stats=train_dataset.stats)
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=cfg.train.batch_size,
-        shuffle=True,
-        num_workers=cfg.train.num_workers,
-        pin_memory=True,
-    )
+    out = Path(cfg.output_dir); out.mkdir(parents=True, exist_ok=True)
+    np.savez(out / "norm_stats.npz",
+             **{f"{v}_mean": m for v, (m, s) in train_dataset.stats.items()},
+             **{f"{v}_std":  s for v, (m, s) in train_dataset.stats.items()})
+
+    train_loader = DataLoader(train_dataset, batch_size=cfg.train.batch_size, shuffle=True,
+                              num_workers=cfg.train.num_workers, pin_memory=True)
     ## validate on the full grid (deterministic, comparable across epochs); full grids only fit batch 1
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=1,
-        shuffle=False,
-        num_workers=cfg.train.num_workers,
-        pin_memory=True,
-    )
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False,
+                            num_workers=cfg.train.num_workers, pin_memory=True)
 
     return train_loader, val_loader
+
+
+def compute_stats(dates, dir_800m, dir_160m, input_vars, target_vars, sea_mask):
+    """Mean/std per variable over sea cells of the given (training) dates."""
+    sea = sea_mask.numpy()
+    stats = {}
+    for v in dict.fromkeys(input_vars + target_vars):          # unique, ordered
+        d = dir_160m if v in target_vars else dir_800m
+        n, s, ss = 0, 0.0, 0.0
+        for date in dates:
+            a = np.load(d / daily_filename(v, date))[sea].astype(np.float64)
+            a = a[np.isfinite(a)]
+            n += a.size; s += a.sum(); ss += (a * a).sum()
+        mean = s / n
+        stats[v] = (mean, float(np.sqrt(ss / n - mean ** 2)))
+    return stats
 
 
 class DownscalingDataset(Dataset):
@@ -55,7 +62,7 @@ class DownscalingDataset(Dataset):
     Land cells are set to 0 in x and y.
     """
 
-    def __init__(self, cfg, years, patch_size=None):
+    def __init__(self, cfg, years, patch_size=None, stats=None):
         root = Path(cfg.data.processed_dir)
         self.dir_800m = root / "800m_on_160m_grid"
         self.dir_160m = root / "160m"
@@ -69,14 +76,18 @@ class DownscalingDataset(Dataset):
         if not self.dates:
             raise RuntimeError(f"no preprocessed samples in {root} for years {years}")
 
-        stats = np.load(static_dir / "preprocessing_stats.npz")
-        self.mean = {v: float(stats[f"{v}_mean"]) for v in self.input_vars + self.target_vars}
-        self.std = {v: float(stats[f"{v}_std"]) for v in self.input_vars + self.target_vars}
-
         self.sea_mask = torch.from_numpy(np.load(static_dir / "land_mask.npy").astype(bool))
-        ## (1, H, W) float, 1 = sea, 0 = land; returned with every sample for masked_mse
         self.loss_mask = self.sea_mask[None].float()
+
+        if stats is None:      # training set: compute from its own dates
+            stats = compute_stats(self.dates, self.dir_800m, self.dir_160m,
+                                  self.input_vars, self.target_vars, self.sea_mask)
+        self.stats = stats
+        self.mean = {v: m for v, (m, s) in stats.items()}
+        self.std  = {v: s for v, (m, s) in stats.items()}
+
         self.static = self._load_static(static_dir, cfg.data.static_inputs)
+
 
     def __len__(self):
         return len(self.dates)
@@ -121,11 +132,15 @@ class DownscalingDataset(Dataset):
         return dates
 
     def _load_static(self, static_dir, names):
-        ## land_mask is used as 0/1; other static fields are standardised over sea cells
+        ## land_mask is used as 0/1; other static fields are standardised over sea cells.
+        ## distance_to_coast is log1p'd first: the error changes over the first few km, but
+        ## distances reach ~100 km, so plain standardising would squash the coastal range
         sea = self.sea_mask.numpy()
         fields = []
         for name in names:
             arr = np.load(static_dir / f"{name}.npy").astype(np.float32)
+            if name == "distance_to_coast":
+                arr = np.log1p(arr)
             if name != "land_mask":
                 arr = (arr - arr[sea].mean()) / arr[sea].std()
                 arr[~sea] = 0.0
