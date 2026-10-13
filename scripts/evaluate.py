@@ -7,6 +7,8 @@
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2025
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2024
 #Results go to <run_dir>/eval_test
+## --fold sets the run dir (<output_dir>/<fold>) and the fold's val years, for scoring CV runs:
+#python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold val2024 --split val
 
 import argparse
 from pathlib import Path
@@ -16,7 +18,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from raid.config import dict_to_namespace
+from raid.config import apply_fold, dict_to_namespace
 from raid.data.dataset import DownscalingDataset, denormalize
 from raid.log import tee_output
 from raid.metrics import masked_bias, masked_rmse
@@ -35,10 +37,15 @@ def main():
     parser.add_argument("--run_dir", type=str, default=None,
                         help="dir with best.pt + norm_stats.npz (default: output_dir from config)")
     parser.add_argument("--split", type=str, default="test", help="split name from the config")
+    parser.add_argument("--fold", type=str, default=None,
+                        help="CV fold name from split.folds: run dir <output_dir>/<fold>, val = the fold's val years")
     args = parser.parse_args()
 
     with open(args.config) as f:
-        cfg = dict_to_namespace(yaml.safe_load(f))
+        raw = yaml.safe_load(f)
+    if args.fold is not None:
+        apply_fold(raw, args.fold)
+    cfg = dict_to_namespace(raw)
     run = Path(args.run_dir or cfg.output_dir)
     out = run / f"eval_{args.split}"
     out.mkdir(parents=True, exist_ok=True)
@@ -85,7 +92,7 @@ def main():
 
     ## same sea mask every day, so the overall RMSE is the root of the mean daily MSE
     rmse_m, rmse_b = np.sqrt((daily[:, :2] ** 2).mean(0))
-    print(f"{args.split}: {T} days ({ds.dates[0]} -> {ds.dates[-1]}), run {run}")
+    print(f"{args.split}{f' (fold {args.fold})' if args.fold else ''}: {T} days ({ds.dates[0]} -> {ds.dates[-1]}), run {run}")
     print(f"  model    RMSE {rmse_m:.4f} degC  bias {daily[:, 2].mean():+.4f}")
     print(f"  baseline RMSE {rmse_b:.4f} degC  bias {daily[:, 3].mean():+.4f}")
     print(f"  skill vs baseline: {1 - rmse_m / rmse_b:+.1%}")

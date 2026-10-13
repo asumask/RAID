@@ -3,7 +3,7 @@ import argparse
 import yaml
 import torch
 
-from raid.config import dict_to_namespace
+from raid.config import apply_fold, dict_to_namespace
 from raid.data.dataset import build_dataloaders
 from raid.log import tee_output
 from raid.models import build_model
@@ -39,10 +39,7 @@ def load_config(config_path, args):
     if args.output_dir is not None:
         cfg["output_dir"] = args.output_dir
     if args.fold is not None:
-        fold = cfg["split"]["folds"][args.fold]     # KeyError = unknown fold name
-        cfg["split"]["train"]["years"] = fold["train"]
-        cfg["split"]["val"]["years"]   = fold["val"]
-        cfg["output_dir"] = f'{cfg["output_dir"]}/{args.fold}'
+        apply_fold(cfg, args.fold)
 
     test_years = set(cfg["split"].get("test", {}).get("years", []))
     train_years, val_years = set(cfg["split"]["train"]["years"]), set(cfg["split"]["val"]["years"])
