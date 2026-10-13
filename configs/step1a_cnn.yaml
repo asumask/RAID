@@ -32,7 +32,6 @@ split:
 
 model:
   name: cnn
-  in_channels: 4        # len(input_vars) + len(static_inputs)
   hidden_dim: 64
   n_blocks: 4  
 

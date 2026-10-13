@@ -1,0 +1,46 @@
+data:
+  raw_800m:
+    path: /data/osea/s3-osea/Norkyst/avg
+    location_name: norkyst
+    resolution_tag: 800m
+  raw_160m:
+    path: /data/osea/s3-osea/Norfjords/A04_v3/avg
+    location_name: norfjords
+    resolution_tag: 160m
+
+  processed_dir: data/processed
+
+  input_vars: [temp]                    # from 800m, reprojected onto the 160m grid
+  target_vars: [temp]                   # from 160m
+  static_inputs: [bathymetry, land_mask, distance_to_coast]
+
+  ## vertical level index into s_rho / s_w; variables not listed default to -1 (surface).
+  ## ignored for 2D variables (e.g. zeta).
+  levels:
+    temp: -1
+
+split:
+  train:
+    years: [2023, 2024]         # default (no --fold) = same as fold val2025
+  val:
+    years: [2025]
+  test:
+    years: [2026]               # never touched during training/CV
+  folds:                        # selected with --fold; 2023 = Dec 2023 only, always in train
+    val2025: {train: [2023, 2024], val: [2025]}
+    val2024: {train: [2023, 2025], val: [2024]}
+
+
+model:
+  name: unet
+  base_channels: 32     # 32-64-128-256; must be divisible by 8 (GroupNorm)
+  depth: 3              # 3 poolings: 256 patch -> 32 at the bottleneck
+
+train:
+  patch_size: 256       # keep a multiple of 2**depth
+  batch_size: 8
+  num_workers: 4
+  lr: 0.0003
+  epochs: 50
+
+output_dir: experiments/step1b_unet

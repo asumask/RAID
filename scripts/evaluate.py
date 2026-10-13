@@ -19,7 +19,8 @@ from torch.utils.data import DataLoader
 from raid.config import dict_to_namespace
 from raid.data.dataset import DownscalingDataset, denormalize
 from raid.metrics import masked_bias, masked_rmse
-from train import build_model
+from raid.models import build_model
+
 
 
 def load_stats(path, names):

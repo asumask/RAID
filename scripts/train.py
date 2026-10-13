@@ -5,8 +5,9 @@ import torch
 
 from raid.config import dict_to_namespace
 from raid.data.dataset import build_dataloaders
-from raid.models.cnn import SimpleSRCNN
+from raid.models import build_model
 from raid.trainer import fit
+
 
 # usage: CUDA_VISIBLE_DEVICES=1 
 #        python3 scripts/train.py --config /home/a22740/asumak/gitlab/raid/configs/step1a_cnn.yaml 
@@ -50,16 +51,6 @@ def load_config(config_path, args):
 
     return dict_to_namespace(cfg)
 
-
-def build_model(cfg):
-    m = cfg.model
-    if m.name == "cnn":
-        return SimpleSRCNN(
-            in_channels=getattr(m, "in_channels", 3),
-            hidden_dim=getattr(m, "hidden_dim", 64),
-            n_blocks=getattr(m, "n_blocks", 4),
-        )
-    raise ValueError(f"Unknown model: {m.name}")
 
 def main():
     args = parse_args()
