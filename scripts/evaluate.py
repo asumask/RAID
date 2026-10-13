@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader
 
 from raid.config import dict_to_namespace
 from raid.data.dataset import DownscalingDataset, denormalize
+from raid.log import tee_output
 from raid.metrics import masked_bias, masked_rmse
 from raid.models import build_model
 
@@ -41,6 +42,7 @@ def main():
     run = Path(args.run_dir or cfg.output_dir)
     out = run / f"eval_{args.split}"
     out.mkdir(parents=True, exist_ok=True)
+    tee_output(out / "evaluate.log")
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     in_vars, tgt_vars = cfg.data.input_vars, cfg.data.target_vars

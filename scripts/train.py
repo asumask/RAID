@@ -5,6 +5,7 @@ import torch
 
 from raid.config import dict_to_namespace
 from raid.data.dataset import build_dataloaders
+from raid.log import tee_output
 from raid.models import build_model
 from raid.trainer import fit
 
@@ -56,6 +57,8 @@ def main():
     args = parse_args()
     cfg = load_config(args.config, args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    tee_output(f"{cfg.output_dir}/train.log")
+    print(f"device {device}  train {cfg.split.train.years}  val {cfg.split.val.years}  output_dir {cfg.output_dir}")
 
     train_loader, val_loader = build_dataloaders(cfg)
     model = build_model(cfg).to(device)

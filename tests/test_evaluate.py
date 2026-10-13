@@ -11,7 +11,8 @@ import torch
 import yaml
 
 from raid.data.file_utils import daily_filename
-from raid.models.cnn import SimpleSRCNN
+from raid.config import dict_to_namespace
+from raid.models import build_model
 
 ROOT = Path(__file__).resolve().parents[1]
 SHAPE = (40, 60)
@@ -44,8 +45,7 @@ def test_evaluate_runs_and_untrained_model_equals_baseline(tmp_path):
     (tmp_path / "cfg.yaml").write_text(yaml.safe_dump(cfg))
 
     np.savez(run / "norm_stats.npz", temp_mean=10.0, temp_std=1.0)
-    m = cfg["model"]
-    torch.save(SimpleSRCNN(m["in_channels"], m["hidden_dim"], m["n_blocks"]).state_dict(), run / "best.pt")
+    torch.save(build_model(dict_to_namespace(cfg)).state_dict(), run / "best.pt")
 
     subprocess.run([sys.executable, str(ROOT / "scripts" / "evaluate.py"), "--config", str(tmp_path / "cfg.yaml")],
                    check=True)
