@@ -82,3 +82,49 @@ def test_evaluate_fold_uses_fold_run_dir_and_val_years(tmp_path):
     run_evaluate("--config", cfg_path, "--fold", "val2024", "--split", "val")
 
     assert list(np.load(run / "eval_val" / "dates.npy")) == ["20240301", "20240302"]
+
+
+def write_run(cfg_path, run_dir, mean, std, shift):
+    ## model whose correction is a constant `shift` in normalised units, i.e. shift * std degC
+    cfg = dict_to_namespace(yaml.safe_load(cfg_path.read_text()))
+    model = build_model(cfg)
+    with torch.no_grad():
+        model.output_conv.bias.fill_(shift)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    np.savez(run_dir / "norm_stats.npz", temp_mean=mean, temp_std=std)
+    torch.save(model.state_dict(), run_dir / "best.pt")
+
+
+def test_evaluate_ensemble_averages_fold_models_in_degC(tmp_path):
+    ## different stats per fold: each model must see inputs normalised with its own stats
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "val2025")
+    write_run(cfg_path, tmp_path / "run" / "val2025", mean=10.0, std=1.0, shift=0.5)    # +0.5 degC
+    write_run(cfg_path, tmp_path / "run" / "val2024", mean=9.0, std=2.0, shift=-0.1)    # -0.2 degC
+
+    run_evaluate("--config", cfg_path, "--fold", "ensemble")
+
+    out = tmp_path / "run" / "ensemble" / "eval_test"
+    daily = np.load(out / "daily_metrics.npy")
+    np.testing.assert_allclose(daily[:, 2] - daily[:, 3], 0.15, atol=1e-4)   # mean of +0.5 and -0.2
+    assert list(np.load(out / "dates.npy")) == DATES
+
+
+def test_evaluate_ensemble_refuses_val_split(tmp_path):
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "val2025")
+    result = subprocess.run([sys.executable, str(ROOT / "scripts" / "evaluate.py"), "--config", str(cfg_path),
+                             "--fold", "ensemble", "--split", "val"], capture_output=True, text=True)
+    assert result.returncode != 0 and "only works with --split test" in result.stderr
+
+
+def test_evaluate_output_dir_overrides_config_for_fold_and_ensemble(tmp_path):
+    ## runs live outside the config's output_dir (tmp_path/run), as with train.py --output_dir
+    elsewhere = tmp_path / "elsewhere"
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, elsewhere / "val2025")
+    write_run(cfg_path, elsewhere / "val2024", mean=10.0, std=1.0, shift=0.0)
+
+    run_evaluate("--config", cfg_path, "--fold", "val2025", "--output_dir", elsewhere)
+    run_evaluate("--config", cfg_path, "--fold", "ensemble", "--output_dir", elsewhere)
+
+    assert (elsewhere / "val2025" / "eval_test" / "dates.npy").exists()
+    assert (elsewhere / "ensemble" / "eval_test" / "dates.npy").exists()
+    assert not (tmp_path / "run").exists()
