@@ -101,7 +101,9 @@ def main():
     ds = members[0][1]     # dates, sea mask and file dirs are the same for every member
 
     var, in_var = cfg.data.target_vars[0], cfg.data.input_vars[0]
-    sea = ds.sea_mask.numpy()
+    ## copy, not a view: starting the DataLoader workers (forkserver, the default from python 3.14) moves the
+    ## dataset's tensors into shared memory, which would leave a .numpy() view pointing at freed memory
+    sea = ds.sea_mask.numpy().copy()
     T, (H, W) = len(ds), sea.shape
     ## (T, H, W) degC, land = NaN; written day by day so the whole array never sits in RAM
     pred_all = np.lib.format.open_memmap(out / f"pred_{var}.npy", mode="w+", dtype=np.float32, shape=(T, H, W))
