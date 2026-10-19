@@ -29,6 +29,7 @@ from torch.utils.data import DataLoader
 
 from raid.config import apply_fold, dict_to_namespace
 from raid.data.dataset import DownscalingDataset, denormalize
+from raid.data.file_utils import daily_filename
 from raid.log import tee_output
 from raid.metrics import masked_bias, masked_rmse
 from raid.models import build_model
@@ -97,7 +98,7 @@ def main():
     members = load_members(cfg, run_dirs, getattr(cfg.split, args.split).years, device)
     loaders = [DataLoader(ds, batch_size=1, shuffle=False, num_workers=cfg.train.num_workers)
                for _, ds, _ in members]
-    ds, stats = members[0][1], members[0][2]     # target and baseline in degC are the same for every member
+    ds = members[0][1]     # dates, sea mask and file dirs are the same for every member
 
     var, in_var = cfg.data.target_vars[0], cfg.data.input_vars[0]
     sea = ds.sea_mask.numpy()
@@ -108,26 +109,19 @@ def main():
     daily = np.zeros((T, 4), np.float32)
     sq_model, sq_base, bias_sum = (np.zeros((H, W)) for _ in range(3))
 
-    print(cfg)
-    print(run_dirs)
-    print(ds)
-    print(stats)
-    for i, batches in enumerate(zip(*loaders)):
-        if i == 0:
-            x, y, _ = batches[0]
-            print(x[0, 0].numpy())
-
-    import sys
-    sys.exit()
-
     with torch.no_grad():
         for i, batches in enumerate(zip(*loaders)):
             ## ensemble = mean of the members' predictions in degC (a single run is a 1-member ensemble)
             p = np.mean([denormalize(model(x.to(device))[0, 0].cpu().numpy(), *st[var])
                          for (model, _, st), (x, _, _) in zip(members, batches)], axis=0)
-            x, y, _ = batches[0]
-            t = denormalize(y[0, 0].numpy(), *stats[var])
-            b = denormalize(x[0, 0].numpy(), *stats[in_var])   # bicubic baseline
+            ## target and bicubic baseline straight from the degC files, not via the normalised x/y:
+            ## the dataset fills NaN with 0 after normalising, which would turn them into the fold's mean
+            date = ds.dates[i]
+            t = np.load(ds.dir_160m / daily_filename(var, date))
+            b = np.load(ds.dir_800m / daily_filename(in_var, date))
+            n_t, n_b = np.isnan(t[sea]).sum(), np.isnan(b[sea]).sum()
+            if n_t or n_b:
+                raise ValueError(f"{date}: NaN on sea cells, target {n_t}, baseline input {n_b}")
             pred_all[i] = np.where(sea, p, np.nan)
             daily[i] = (masked_rmse(p, t, sea), masked_rmse(b, t, sea),
                         masked_bias(p, t, sea), masked_bias(b, t, sea))
