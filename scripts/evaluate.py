@@ -112,6 +112,7 @@ def main():
     print(run_dirs)
     print(ds)
     print(stats)
+    print(zip(*loaders))
 
 
 
