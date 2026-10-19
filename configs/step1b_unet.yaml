@@ -41,6 +41,6 @@ train:
   batch_size: 8
   num_workers: 4
   lr: 0.0003
-  epochs: 50
+  epochs: 25
 
 output_dir: experiments/step1b_unet

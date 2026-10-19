@@ -2,7 +2,7 @@
 ## inputs are normalised with the run's own training stats (norm_stats.npz), as in training.
 ## python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2025
 
-
+## CUDA_VISIBLE_DEVICES=1
 ## usage: 
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2025
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2024
@@ -14,6 +14,8 @@
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble
 ## --output_dir overrides output_dir from the config (same as train.py), e.g. for runs kept elsewhere:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble --output_dir /some/where/unet_try2
+
+#CUDA_VISIBLE_DEVICES=1 python3 scripts/evaluate.py --config configs/step1b_unet.yaml --run_dir /data/prosjekt/15915_RAID/train/step1B/val2025  --fold val2025 --output_dir experiments/step1b_unet
 
 import argparse
 from pathlib import Path
