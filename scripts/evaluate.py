@@ -15,7 +15,9 @@
 ## --output_dir overrides output_dir from the config (same as train.py), e.g. for runs kept elsewhere:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble --output_dir /some/where/unet_try2
 
-#CUDA_VISIBLE_DEVICES=1 python3 scripts/evaluate.py --config configs/step1b_unet.yaml --run_dir /data/prosjekt/15915_RAID/train/step1B/val2025  --fold val2025 --output_dir experiments/step1b_unet
+#CUDA_VISIBLE_DEVICES=1 python3 scripts/evaluate.py --config configs/step1b_unet.yaml 
+#      --run_dir /data/prosjekt/15915_RAID/train/step1B/val2025  
+#      --fold val2025 --output_dir experiments/step1b_unet
 
 import argparse
 from pathlib import Path
@@ -105,6 +107,16 @@ def main():
     ## per day: rmse_model, rmse_baseline, bias_model, bias_baseline (bias = pred - target)
     daily = np.zeros((T, 4), np.float32)
     sq_model, sq_base, bias_sum = (np.zeros((H, W)) for _ in range(3))
+
+    print(cfg)
+    print(run_dirs)
+    print(ds)
+    print(stats)
+
+
+
+    import sys
+    sys.exit()
 
     with torch.no_grad():
         for i, batches in enumerate(zip(*loaders)):
