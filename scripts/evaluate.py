@@ -113,11 +113,9 @@ def main():
     print(ds)
     print(stats)
     for i, batches in enumerate(zip(*loaders)):
-        print(i)
-        print(batches)
-        print(" ")
-
-
+        if i == 0:
+            x, y, _ = batches[0]
+            print(x[0, 0].numpy())
 
     import sys
     sys.exit()
