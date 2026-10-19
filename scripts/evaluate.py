@@ -112,7 +112,10 @@ def main():
     print(run_dirs)
     print(ds)
     print(stats)
-    print(zip(*loaders))
+    for i, batches in enumerate(zip(*loaders)):
+        print(i)
+        print(batches)
+        print(" ")
 
 
 
