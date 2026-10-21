@@ -90,7 +90,6 @@ def make_train_dataset(tmp_path):
     land[:20, :30] = 0
     np.save(tmp_path / "static" / "land_mask.npy", land)
     np.save(tmp_path / "static" / "bathymetry.npy", rng.uniform(10, 800, GRID).astype(np.float32))
-    np.savez(tmp_path / "static" / "preprocessing_stats.npz", temp_mean=0.0, temp_std=1.0)
 
     cfg = SimpleNamespace(
         data=SimpleNamespace(

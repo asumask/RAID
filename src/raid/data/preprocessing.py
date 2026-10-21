@@ -3,7 +3,6 @@ import numpy as np
 import xarray as xr
 from scipy import ndimage
 
-from .file_utils import daily_filename
 
 GRID_PARAMS = {
     "800m": {"false_easting": 3369600, "false_northing": 1844800},
@@ -38,27 +37,6 @@ def save_static_fields(out_dir, names):
         get, dtype = STATIC_FIELDS[name]
         np.save(out_dir / f"{name}.npy", get(ds).astype(dtype))
 
-
-def compute_stats(data_dir, names, years):
-    ## normalisation stats per variable over sea cells of the training days only
-    ## accumulated day by day in float64 to avoid loading every day into memory
-    sea = xr.open_dataset(REFERENCE_FILE_160M)["mask_rho"].values == 1
-    stats = {}
-    for name in names:
-        s = ss = n = 0.0
-        for year in years:
-            for path in sorted(data_dir.glob(daily_filename(name, f"{year}[0-9][0-9][0-9][0-9]"))):
-                v = np.load(path)[sea].astype(np.float64)
-                v = v[~np.isnan(v)]
-                s += v.sum()
-                ss += (v**2).sum()
-                n += v.size
-        if n == 0:
-            raise RuntimeError(f"no training files for {name} in {data_dir} for years {years}")
-        mean = s / n
-        stats[f"{name}_mean"] = mean
-        stats[f"{name}_std"] = np.sqrt(ss / n - mean**2)
-    return stats
 
 def get_true_coords(ds, res):
     p = GRID_PARAMS[res]

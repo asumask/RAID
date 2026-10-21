@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from raid.data.preprocessing import extract_variable, reproject_800m_to_160m, save_static_fields, compute_stats, set_rho_variables
+from raid.data.preprocessing import extract_variable, reproject_800m_to_160m, save_static_fields, set_rho_variables
 from raid.data.file_utils import list_files, get_paired_dates, _extract_date, daily_filename
 
 ## create source files with same coordinates
@@ -74,14 +74,6 @@ def main():
     out_static = root / "static"
     out_static.mkdir(parents=True, exist_ok=True)
     save_static_fields(out_static, cfg["data"]["static_inputs"])
-
-    ## stats from the 160m targets; input-only variables fall back to the reprojected 800m files
-    train_years = cfg["split"]["train"]["years"]
-    input_only = [v for v in input_vars if v not in target_vars]
-    stats = compute_stats(out_160m, target_vars, train_years)
-    stats.update(compute_stats(out_800m, input_only, train_years))
-    np.savez(out_static / "preprocessing_stats.npz", **stats)
-    
 
 
 if __name__ == "__main__":

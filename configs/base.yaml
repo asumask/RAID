@@ -18,7 +18,3 @@ data:
 
   ## optional vertical level index into s_rho / s_w, e.g. levels: {temp: -1}
   ## variables not listed default to -1 (surface)
-
-split:
-  train:
-    years: [2023, 2024]                 # normalization stats are computed from these years only
