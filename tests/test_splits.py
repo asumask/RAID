@@ -54,7 +54,7 @@ def write_processed_dir(root, dates, var="temp", shape=(4, 5)):
 
 
 def test_datasets_for_each_split_have_disjoint_days(tmp_path):
-    raw = load_cfg(ROOT / "configs" / "base.yaml")
+    raw = load_cfg(ROOT / "configs" / "step1a_cnn.yaml")
     splits = {name: s for name, s in raw["split"].items() if name != "folds"}
     all_years = sorted({y for s in splits.values() for y in s["years"]})
     ## include year boundaries, where an off-by-one in year filtering would leak days

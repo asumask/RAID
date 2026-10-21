@@ -1,3 +1,5 @@
+## preprocessing config: python3 scripts/preprocess.py --config configs/base.yaml
+## training/evaluation use configs/step1*.yaml
 data:
   raw_800m:
     path: /data/osea/s3-osea/Norkyst/avg
@@ -10,22 +12,13 @@ data:
 
   processed_dir: data/processed
 
-  input_vars: [temp]                    # from 800m, reprojected onto the 160m grid
-  target_vars: [temp]                   # from 160m
+  input_vars: [salt]                    # from 800m, reprojected onto the 160m grid
+  target_vars: [salt]                   # from 160m
   static_inputs: [bathymetry, land_mask, distance_to_coast]
 
-  ## vertical level index into s_rho / s_w; variables not listed default to -1 (surface).
-  ## ignored for 2D variables (e.g. zeta).
-  levels:
-    temp: -1
+  ## optional vertical level index into s_rho / s_w, e.g. levels: {temp: -1}
+  ## variables not listed default to -1 (surface)
 
 split:
   train:
-    years: [2023, 2024]         # default (no --fold) = same as fold val2025
-  val:
-    years: [2025]
-  test:
-    years: [2026]               # never touched during training/CV
-  folds:                        # selected with --fold; 2023 = Dec 2023 only, always in train
-    val2025: {train: [2023, 2024], val: [2025]}
-    val2024: {train: [2023, 2025], val: [2024]}
+    years: [2023, 2024]                 # normalization stats are computed from these years only
