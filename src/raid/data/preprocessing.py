@@ -44,6 +44,27 @@ def get_true_coords(ds, res):
     y = ds["eta_rho"].values - p["false_northing"]
     return x, y
 
+def to_rho(ds, da):
+    ## average u (v) points onto rho points along xi (eta), like ROMS u2rho/v2rho.
+    ## land faces count as 0 (no flow through the coast); mask_u/mask_v are derived from mask_rho
+    ## (a face is sea only if both rho cells are), so older files without them work too.
+    ## the outermost rho column (row) has one face only and copies it.
+    sea = ds["mask_rho"].values == 1
+    if set(da.dims) == {"eta_u", "xi_u"}:
+        a = np.where(sea[:, :-1] & sea[:, 1:], da.transpose("eta_u", "xi_u").values, 0)
+        out = np.empty((a.shape[0], a.shape[1] + 1), dtype=a.dtype)
+        out[:, 1:-1] = 0.5 * (a[:, :-1] + a[:, 1:])
+        out[:, 0], out[:, -1] = a[:, 0], a[:, -1]
+    elif set(da.dims) == {"eta_v", "xi_v"}:
+        a = np.where(sea[:-1] & sea[1:], da.transpose("eta_v", "xi_v").values, 0)
+        out = np.empty((a.shape[0] + 1, a.shape[1]), dtype=a.dtype)
+        out[1:-1] = 0.5 * (a[:-1] + a[1:])
+        out[0], out[-1] = a[0], a[-1]
+    else:
+        return da
+    return xr.DataArray(out, dims=("eta_rho", "xi_rho"),
+                        coords={"eta_rho": ds["eta_rho"].values, "xi_rho": ds["xi_rho"].values}, name=da.name)
+
 def extract_variable(ds, res, name, level=-1):
     x, y = get_true_coords(ds, res)
     ds = ds.assign_coords(xi_rho=x, eta_rho=y)
@@ -53,6 +74,7 @@ def extract_variable(ds, res, name, level=-1):
     for vdim in ("s_rho", "s_w"):
         if vdim in da.dims:
             da = da.isel({vdim: level})
+    da = to_rho(ds, da)       # u/v/ubar/vbar -> rho points; rho variables pass through
     if set(da.dims) != {"eta_rho", "xi_rho"}:
         raise ValueError(f"{name}: expected a 2D rho-grid field after selection, got dims {da.dims}")
     return da.where(ds["mask_rho"] == 1)

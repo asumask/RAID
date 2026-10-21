@@ -78,3 +78,48 @@ def test_no_nans_left_after_filling(land):
     assert not np.isnan(filled.values).any()
     sea = ~np.isnan(src.values)
     np.testing.assert_array_equal(filled.values[sea], src.values[sea])
+
+
+def add_uv(ds, u, v):
+    ## staggered u (eta_rho x xi_rho-1) and v (eta_rho-1 x xi_rho); masked faces are NaN like decoded fill values
+    sea = ds["mask_rho"].values == 1
+    u = np.where(sea[:, :-1] & sea[:, 1:], u, np.nan)
+    v = np.where(sea[:-1] & sea[1:], v, np.nan)
+    return ds.assign(
+        u=(("ocean_time", "s_rho", "eta_u", "xi_u"), np.broadcast_to(u, (1, 3, *u.shape))),
+        v=(("ocean_time", "s_rho", "eta_v", "xi_v"), np.broadcast_to(v, (1, 3, *v.shape))),
+    )
+
+
+def test_uv_are_averaged_onto_rho_points():
+    ds = make_ds("800m", nx=6, ny=5, dx=800, offset=0, land=(slice(0, 2), slice(0, 2)))
+    xi = np.arange(5, dtype=np.float32)
+    ds = add_uv(ds, u=np.tile(xi, (5, 1)), v=np.tile(xi[:4, None], (1, 6)))
+    sea = ds["mask_rho"].values == 1
+
+    u = extract_variable(ds, "800m", "u").values
+    v = extract_variable(ds, "800m", "v").values
+
+    assert u.shape == v.shape == sea.shape
+    np.testing.assert_array_equal(np.isnan(u), ~sea)
+    np.testing.assert_array_equal(np.isnan(v), ~sea)
+    ## interior sea cell: mean of its two faces
+    assert u[3, 2] == 0.5 * (1 + 2)
+    assert v[3, 2] == 0.5 * (2 + 3)
+    ## sea cell next to land: the land face counts as 0
+    assert u[0, 2] == 0.5 * (0 + 2)
+    assert v[2, 0] == 0.5 * (0 + 2)
+    ## outermost column/row copies its only face
+    assert u[3, 5] == 4
+    assert v[4, 3] == 3
+
+
+def test_uv_reproject_to_the_160m_grid():
+    ds_800m, ds_160m = make_pair()
+    ds_800m = add_uv(ds_800m, u=np.ones((50, 59), np.float32), v=np.ones((49, 60), np.float32))
+    land = ds_160m["mask_rho"].values == 0
+
+    for name in ("u", "v"):
+        arr = reproject_800m_to_160m(ds_800m, ds_160m, name)
+        assert arr.shape == land.shape
+        np.testing.assert_array_equal(np.isnan(arr), land)
