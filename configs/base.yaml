@@ -12,8 +12,8 @@ data:
 
   processed_dir: data/processed
 
-  input_vars: [salt]                    # from 800m, reprojected onto the 160m grid
-  target_vars: [salt]                   # from 160m
+  input_vars: [u, v]                   # from 800m, reprojected onto the 160m grid
+  target_vars: [u, v]                  # from 160m
   static_inputs: [bathymetry, land_mask, distance_to_coast]
 
   ## optional vertical level index into s_rho / s_w, e.g. levels: {temp: -1}
