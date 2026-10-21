@@ -11,11 +11,15 @@ from raid.data.file_utils import list_files, get_paired_dates, _extract_date, da
 ## create source files with same coordinates
 ## CUDA_VISIBLE_DEVICES=0
 ## python3 scripts/preprocess.py --config /home/a22740/asumak/gitlab/raid/configs/base.yaml
+## --method sets the 800m -> 160m interpolation (default cubic), e.g. for the old bilinear data:
+## python3 scripts/preprocess.py --config configs/base.yaml --method linear
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--method", type=str, default="cubic", choices=["linear", "cubic"],
+                        help="interpolation of the 800m input onto the 160m grid (xarray interp)")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -48,7 +52,7 @@ def main():
         ds_160m= set_rho_variables(ds_160m, "160m")
 
         for name in input_vars:
-            arr = reproject_800m_to_160m(ds_800m, ds_160m, name, levels.get(name, -1), method="linear")
+            arr = reproject_800m_to_160m(ds_800m, ds_160m, name, levels.get(name, -1), method=args.method)
             np.save(out_800m / daily_filename(name, date), arr)
 
         for name in target_vars:
