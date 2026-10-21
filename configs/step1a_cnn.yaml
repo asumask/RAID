@@ -18,6 +18,7 @@ data:
   ## ignored for 2D variables (e.g. zeta).
   levels:
     temp: -1
+    salt: -1
 
 split:
   train:
