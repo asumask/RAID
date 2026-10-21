@@ -13,6 +13,8 @@ from raid.data.file_utils import list_files, get_paired_dates, _extract_date, da
 ## python3 scripts/preprocess.py --config /home/a22740/asumak/gitlab/raid/configs/base.yaml
 ## --method sets the 800m -> 160m interpolation (default cubic), e.g. for the old bilinear data:
 ## python3 scripts/preprocess.py --config configs/base.yaml --method linear
+## by default existing outputs are skipped; add --overwrite to reprocess everything:
+## python3 scripts/preprocess.py --config configs/base.yaml --overwrite
 
 
 def main():
@@ -20,6 +22,8 @@ def main():
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--method", type=str, default="cubic", choices=["linear", "cubic"],
                         help="interpolation of the 800m input onto the 160m grid (xarray interp)")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="reprocess all dates; by default only dates with missing output files are processed")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -42,6 +46,13 @@ def main():
     ## -------------------------------------
     
     for date in dates:
+        todo_in = [n for n in input_vars
+                   if args.overwrite or not (out_800m / daily_filename(n, date)).exists()]
+        todo_tgt = [n for n in target_vars
+                    if args.overwrite or not (out_160m / daily_filename(n, date)).exists()]
+        if not todo_in and not todo_tgt:
+            continue
+
         path_800m = next(f for f in files_800m if _extract_date(f) == date)
         path_160m = next(f for f in files_160m if _extract_date(f) == date)
 
@@ -51,11 +62,11 @@ def main():
         ds_800m= set_rho_variables(ds_800m, "800m")
         ds_160m= set_rho_variables(ds_160m, "160m")
 
-        for name in input_vars:
+        for name in todo_in:
             arr = reproject_800m_to_160m(ds_800m, ds_160m, name, levels.get(name, -1), method=args.method)
             np.save(out_800m / daily_filename(name, date), arr)
 
-        for name in target_vars:
+        for name in todo_tgt:
             arr = extract_variable(ds_160m, "160m", name, levels.get(name, -1))
             np.save(out_160m / daily_filename(name, date), arr.values.astype(np.float32))
     
