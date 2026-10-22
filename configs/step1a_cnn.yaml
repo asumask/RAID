@@ -19,15 +19,13 @@ data:
   levels:
     temp: -1
     salt: -1
+    u: -1
+    v: -1
 
 split:
-  train:
-    years: [2023, 2024]         # default (no --fold) = same as fold val2025
-  val:
-    years: [2025]
   test:
     years: [2026]               # never touched during training/CV
-  folds:                        # selected with --fold; 2023 = Dec 2023 only, always in train
+  folds:                        # train/val years, selected with --fold; 2023 = Dec 2023 only, always in train
     val2025: {train: [2023, 2024], val: [2025]}
     val2024: {train: [2023, 2025], val: [2024]}
 

@@ -2,7 +2,8 @@
 ## mapped and broken down by distance to coast, depth and bathymetry slope.
 ##   coastal / fjord / steep-slope structure -> predictable from static fields (add them as inputs)
 ##   spread over open water (eddies, filaments) -> mostly chaotic; MSE floor is near the baseline
-## python3 scripts/error_map.py --config configs/step1a_cnn.yaml --split val
+## python3 scripts/error_map.py --config configs/step1a_cnn.yaml --split val --fold val2025
+## python3 scripts/error_map.py --config configs/step1a_cnn.yaml --split test
 
 import argparse
 from pathlib import Path
@@ -17,6 +18,7 @@ import yaml
 from matplotlib.colors import LinearSegmentedColormap
 from scipy import ndimage
 
+from raid.config import apply_fold
 from raid.data.file_utils import daily_filename
 
 CELL_KM = 0.16  # 160m grid spacing
@@ -138,10 +140,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config")
     parser.add_argument("--split", type=str, default="val", help="split name from the config (train/val/...)")
-    parser.add_argument("--out", type=str, default=None, help="output dir (default: <output_dir>/error_map)")
+    parser.add_argument("--fold", type=str, default=None,
+                        help="CV fold name from split.folds; needed for --split train/val")
+    parser.add_argument("--out", type=str, default=None,
+                        help="output dir (default: <output_dir>[/<fold>]/error_map)")
     args = parser.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
+    if args.fold is not None:
+        apply_fold(cfg, args.fold)
+    elif args.split in ("train", "val"):
+        parser.error(f"--split {args.split} needs --fold: train/val years come from split.folds")
     root = Path(cfg["data"]["processed_dir"])
     dir_800m, dir_160m, static_dir = root / "800m_on_160m_grid", root / "160m", root / "static"
     var = cfg["data"]["target_vars"][0]

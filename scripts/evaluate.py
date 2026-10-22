@@ -88,6 +88,8 @@ def main():
     else:
         if args.fold is not None:
             apply_fold(raw, args.fold)
+        elif args.split in ("train", "val"):
+            parser.error(f"--split {args.split} needs --fold: train/val years come from split.folds")
         run_dirs = [Path(args.run_dir or raw["output_dir"])]
         out = run_dirs[0] / f"eval_{args.split}"
     cfg = dict_to_namespace(raw)

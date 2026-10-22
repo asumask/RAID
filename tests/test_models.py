@@ -66,7 +66,7 @@ MODEL_NAMES = ["cnn", "unet"]
 PATCH = 256
 
 def make_cfg(model_name):
-    raw = yaml.safe_load((ROOT / "configs" / "base.yaml").read_text())
+    raw = yaml.safe_load((ROOT / "configs" / "step1a_cnn.yaml").read_text())
     raw["model"] = {"name": model_name}
     return raw
 
@@ -77,7 +77,7 @@ def channels(raw):
     return len(d["input_vars"]) + len(d["static_inputs"]), len(d["target_vars"])
 
 
-def test_base_config_gives_4_input_and_1_output_channel():
+def test_step1a_config_gives_4_input_and_1_output_channel():
     assert channels(make_cfg(MODEL_NAMES[0])) == (4, 1)
 
 

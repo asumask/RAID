@@ -1,6 +1,6 @@
 ## bicubic baseline on the validation split: the 800m field already reprojected (cubic) onto
 ## the 160m grid by preprocess.py, i.e. input channel 0, compared directly against the 160m target.
-## python3 scripts/baseline_test.py --config configs/step1a_cnn.yaml
+## python3 scripts/baseline_test.py --config configs/step1a_cnn.yaml --fold val2025
 
 import argparse
 
@@ -9,16 +9,17 @@ import yaml
 
 from raid.data.dataset import build_dataloaders
 from raid.losses import masked_mse
-from train import dict_to_namespace
+from raid.config import apply_fold, dict_to_namespace
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config")
+    parser.add_argument("--fold", type=str, required=True, help="CV fold name from split.folds, e.g. val2025")
     args = parser.parse_args()
 
     with open(args.config) as f:
-        cfg = dict_to_namespace(yaml.safe_load(f))
+        cfg = dict_to_namespace(apply_fold(yaml.safe_load(f), args.fold))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     _, val_loader = build_dataloaders(cfg)

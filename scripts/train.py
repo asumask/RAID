@@ -11,9 +11,9 @@ from raid.trainer import fit
 
 
 # usage: CUDA_VISIBLE_DEVICES=1 
-#        python3 scripts/train.py --config /home/a22740/asumak/gitlab/raid/configs/step1a_cnn.yaml 
+#        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2025
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2025 --output_dir ...
-#        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2024 --output_dir ...
+#        python3 scripts/train.py --config configs/step1b_unet.yaml --fold val2024 --output_dir ...
 
 
 def parse_args():
@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=None, help="Override epochs")
     parser.add_argument("--lr", type=float, default=None, help="Override learning rate")
     parser.add_argument("--output_dir", type=str, default=None, help="Override output dir")
-    parser.add_argument("--fold", type=str, default=None,
+    parser.add_argument("--fold", type=str, required=True,
                         help="CV fold name from split.folds, e.g. val2025 or val2024")    
     
     return parser.parse_args()
@@ -38,8 +38,7 @@ def load_config(config_path, args):
         cfg["train"]["lr"] = args.lr
     if args.output_dir is not None:
         cfg["output_dir"] = args.output_dir
-    if args.fold is not None:
-        apply_fold(cfg, args.fold)
+    apply_fold(cfg, args.fold)
 
     test_years = set(cfg["split"].get("test", {}).get("years", []))
     train_years, val_years = set(cfg["split"]["train"]["years"]), set(cfg["split"]["val"]["years"])

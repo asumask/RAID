@@ -9,10 +9,10 @@ import yaml
 
 from raid.data.dataset import DownscalingDataset
 from raid.data.file_utils import daily_filename
-from raid.config import dict_to_namespace
+from raid.config import apply_fold, dict_to_namespace
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIGS = sorted((ROOT / "configs").glob("*.yaml"))
+CONFIGS = sorted((ROOT / "configs").glob("step1*.yaml"))     # training configs; base.yaml is preprocessing only
 
 
 def load_cfg(path):
@@ -53,8 +53,9 @@ def write_processed_dir(root, dates, var="temp", shape=(4, 5)):
     np.save(root / "static" / "bathymetry.npy", np.arange(1, 21, dtype=np.float32).reshape(shape))
 
 
-def test_datasets_for_each_split_have_disjoint_days(tmp_path):
-    raw = load_cfg(ROOT / "configs" / "step1a_cnn.yaml")
+@pytest.mark.parametrize("fold", load_cfg(ROOT / "configs" / "step1a_cnn.yaml")["split"]["folds"])
+def test_datasets_for_each_split_have_disjoint_days(tmp_path, fold):
+    raw = apply_fold(load_cfg(ROOT / "configs" / "step1a_cnn.yaml"), fold)
     splits = {name: s for name, s in raw["split"].items() if name != "folds"}
     all_years = sorted({y for s in splits.values() for y in s["years"]})
     ## include year boundaries, where an off-by-one in year filtering would leak days

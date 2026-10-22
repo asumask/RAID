@@ -74,7 +74,7 @@ def test_evaluate_runs_and_untrained_model_equals_baseline(tmp_path):
 
 
 def test_evaluate_fold_uses_fold_run_dir_and_val_years(tmp_path):
-    ## days in every year, so picking the config's default val year (2025) instead of the fold's would show
+    ## days in every year, so picking another fold's val year (2025) instead of this fold's would show
     dates = ["20240301", "20240302", "20250301", "20260301"]
     run = tmp_path / "run" / "val2024"
     cfg_path, _ = make_fake_setup(tmp_path, dates, run)

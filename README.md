@@ -60,7 +60,9 @@ Use the built-in continuous integration in GitLab.
   back to °C before computing metrics
 
 ## Train/val/test split
-- by date range, defined in configs/base.yaml
+- by year, defined under `split` in the step1 configs
+- `split.test`: held-out years, never used in training/CV
+- `split.folds`: train/val years per CV fold, picked with `--fold` (required by train.py)
 
 ## Metrics
 - RMSE etc. over sea cells only, in °C
