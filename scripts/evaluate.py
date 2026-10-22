@@ -16,8 +16,8 @@
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble --output_dir /some/where/unet_try2
 
 #CUDA_VISIBLE_DEVICES=1 python3 scripts/evaluate.py --config configs/step1b_unet.yaml 
-#      --run_dir /data/prosjekt/15915_RAID/train/step1B/val2025  
-#      --fold val2025 --output_dir experiments/step1b_unet
+#      --run_dir /data/prosjekt/15915_RAID/train/step1B/temp/val2025  
+#      --fold val2025 --output_dir experiments/step1b_unet/temp/
 
 import argparse
 from pathlib import Path
