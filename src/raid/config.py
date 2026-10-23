@@ -9,8 +9,13 @@ def dict_to_namespace(d):
     return d
 
 
+def var_dir(cfg):
+    """<output_dir>/<target variable(s)>, e.g. experiments/step1b_unet/temp; fold runs go below it."""
+    return f'{cfg["output_dir"]}/{"_".join(cfg["data"]["target_vars"])}'
+
+
 def apply_fold(cfg, fold_name):
-    """Set split.train/split.val from split.folds[fold_name] and put outputs in <output_dir>/<fold_name>.
+    """Set split.train/split.val from split.folds[fold_name] and put outputs in <output_dir>/<var>/<fold_name>.
 
     The configs only define split.test, split.folds and split.full, so train/val years always come
     from a fold. fold_name "full" trains on split.full.train with no val years (final model).
@@ -25,5 +30,5 @@ def apply_fold(cfg, fold_name):
         train, val = fold["train"], fold["val"]
     cfg["split"]["train"] = {"years": train}
     cfg["split"]["val"] = {"years": val}
-    cfg["output_dir"] = f'{cfg["output_dir"]}/{fold_name}'
+    cfg["output_dir"] = f"{var_dir(cfg)}/{fold_name}"
     return cfg

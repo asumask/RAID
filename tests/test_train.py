@@ -24,7 +24,7 @@ def test_train_full_uses_all_non_test_years_and_saves_last_epoch(tmp_path):
     subprocess.run([sys.executable, str(ROOT / "scripts" / "train.py"), "--config", str(cfg_path),
                     "--fold", "full"], check=True)
 
-    run = tmp_path / "run" / "full"
+    run = tmp_path / "run" / "temp" / "full"
     assert (run / "best.pt").exists()
     log = (run / "train.log").read_text()
     assert "train [2023, 2024, 2025]  val []" in log

@@ -143,7 +143,7 @@ def main():
     parser.add_argument("--fold", type=str, default=None,
                         help="CV fold name from split.folds; needed for --split train/val")
     parser.add_argument("--out", type=str, default=None,
-                        help="output dir (default: <output_dir>[/<fold>]/error_map)")
+                        help="output dir (default: <output_dir>[/<var>/<fold>]/error_map)")
     args = parser.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())

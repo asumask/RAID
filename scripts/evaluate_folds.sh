@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-## evaluate the CV fold models trained by train_folds.sh:
-##   each fold on its own val years -> <output_dir>/<fold>/eval_val
-##   each fold on the test years    -> <output_dir>/<fold>/eval_test
-##   the ensemble of both folds     -> <output_dir>/ensemble/eval_test
+## evaluate the models trained by train_folds.sh:
+##   each fold on its own val years -> <output_dir>/<var>/<fold>/eval_val
+##   each fold on the test years    -> <output_dir>/<var>/<fold>/eval_test
+##   the ensemble of both folds     -> <output_dir>/<var>/ensemble/eval_test
+##   the full model on the test years (it has no val years) -> <output_dir>/<var>/full/eval_test
 ## extra arguments are passed to every evaluate.py run, e.g. --output_dir (not --run_dir):
 ## CUDA_VISIBLE_DEVICES=1 bash scripts/evaluate_folds.sh configs/step1b_unet.yaml
 ## CUDA_VISIBLE_DEVICES=1 bash scripts/evaluate_folds.sh configs/step1b_unet.yaml --output_dir /some/where
@@ -25,3 +26,6 @@ done
 
 echo "=== ensemble, split test ==="
 python3 "$evaluate" --config "$config" --fold ensemble "$@"
+
+echo "=== full, split test ==="
+python3 "$evaluate" --config "$config" --fold full "$@"

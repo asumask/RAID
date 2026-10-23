@@ -7,12 +7,12 @@
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2025
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2024
 #Results go to <run_dir>/eval_test
-## --fold sets the run dir (<output_dir>/<fold>) and the fold's val years, for scoring CV runs:
+## --fold sets the run dir (<output_dir>/<var>/<fold>) and the fold's val years, for scoring CV runs:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold val2024 --split val
 ## --fold full: the final model trained on split.full (test split only, it has no val years):
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold full
 ## --fold ensemble averages the predictions of all fold models (test split only),
-## results go to <output_dir>/ensemble/eval_test:
+## results go to <output_dir>/<var>/ensemble/eval_test:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble
 ## --output_dir overrides output_dir from the config (same as train.py), e.g. for runs kept elsewhere:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble --output_dir /some/where/unet_try2
@@ -29,7 +29,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from raid.config import apply_fold, dict_to_namespace
+from raid.config import apply_fold, dict_to_namespace, var_dir
 from raid.data.dataset import DownscalingDataset, denormalize
 from raid.data.file_utils import daily_filename
 from raid.log import tee_output
@@ -65,12 +65,12 @@ def main():
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config")
     parser.add_argument("--output_dir", type=str, default=None,
                         help="override output_dir from config, as in train.py: runs are read from "
-                             "<output_dir>[/<fold>], results written next to them")
+                             "<output_dir>[/<var>/<fold>], results written next to them")
     parser.add_argument("--run_dir", type=str, default=None,
                         help="dir with best.pt + norm_stats.npz (default: output_dir from config)")
     parser.add_argument("--split", type=str, default="test", help="split name from the config")
     parser.add_argument("--fold", type=str, default=None,
-                        help="CV fold name from split.folds (run dir <output_dir>/<fold>, val = the fold's val "
+                        help="CV fold name from split.folds (run dir <output_dir>/<var>/<fold>, val = the fold's val "
                              "years), or 'ensemble' to average all fold models (test split only)")
     args = parser.parse_args()
 
@@ -84,9 +84,9 @@ def main():
         if args.split != "test":
             parser.error("--fold ensemble only works with --split test")
         if args.run_dir is not None:
-            parser.error("--fold ensemble reads <output_dir>/<fold> for every fold; --run_dir is not used")
-        run_dirs = [Path(raw["output_dir"]) / name for name in raw["split"]["folds"]]
-        out = Path(raw["output_dir"]) / "ensemble" / f"eval_{args.split}"
+            parser.error("--fold ensemble reads <output_dir>/<var>/<fold> for every fold; --run_dir is not used")
+        run_dirs = [Path(var_dir(raw)) / name for name in raw["split"]["folds"]]
+        out = Path(var_dir(raw)) / "ensemble" / f"eval_{args.split}"
     else:
         if args.fold is not None:
             apply_fold(raw, args.fold)

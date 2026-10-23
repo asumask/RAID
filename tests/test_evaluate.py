@@ -76,7 +76,7 @@ def test_evaluate_runs_and_untrained_model_equals_baseline(tmp_path):
 def test_evaluate_fold_uses_fold_run_dir_and_val_years(tmp_path):
     ## days in every year, so picking another fold's val year (2025) instead of this fold's would show
     dates = ["20240301", "20240302", "20250301", "20260301"]
-    run = tmp_path / "run" / "val2024"
+    run = tmp_path / "run" / "temp" / "val2024"
     cfg_path, _ = make_fake_setup(tmp_path, dates, run)
 
     run_evaluate("--config", cfg_path, "--fold", "val2024", "--split", "val")
@@ -97,20 +97,20 @@ def write_run(cfg_path, run_dir, mean, std, shift):
 
 def test_evaluate_ensemble_averages_fold_models_in_degC(tmp_path):
     ## different stats per fold: each model must see inputs normalised with its own stats
-    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "val2025")
-    write_run(cfg_path, tmp_path / "run" / "val2025", mean=10.0, std=1.0, shift=0.5)    # +0.5 degC
-    write_run(cfg_path, tmp_path / "run" / "val2024", mean=9.0, std=2.0, shift=-0.1)    # -0.2 degC
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "temp" / "val2025")
+    write_run(cfg_path, tmp_path / "run" / "temp" / "val2025", mean=10.0, std=1.0, shift=0.5)    # +0.5 degC
+    write_run(cfg_path, tmp_path / "run" / "temp" / "val2024", mean=9.0, std=2.0, shift=-0.1)    # -0.2 degC
 
     run_evaluate("--config", cfg_path, "--fold", "ensemble")
 
-    out = tmp_path / "run" / "ensemble" / "eval_test"
+    out = tmp_path / "run" / "temp" / "ensemble" / "eval_test"
     daily = np.load(out / "daily_metrics.npy")
     np.testing.assert_allclose(daily[:, 2] - daily[:, 3], 0.15, atol=1e-4)   # mean of +0.5 and -0.2
     assert list(np.load(out / "dates.npy")) == DATES
 
 
 def test_evaluate_ensemble_refuses_val_split(tmp_path):
-    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "val2025")
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, tmp_path / "run" / "temp" / "val2025")
     result = subprocess.run([sys.executable, str(ROOT / "scripts" / "evaluate.py"), "--config", str(cfg_path),
                              "--fold", "ensemble", "--split", "val"], capture_output=True, text=True)
     assert result.returncode != 0 and "only works with --split test" in result.stderr
@@ -119,12 +119,12 @@ def test_evaluate_ensemble_refuses_val_split(tmp_path):
 def test_evaluate_output_dir_overrides_config_for_fold_and_ensemble(tmp_path):
     ## runs live outside the config's output_dir (tmp_path/run), as with train.py --output_dir
     elsewhere = tmp_path / "elsewhere"
-    cfg_path, _ = make_fake_setup(tmp_path, DATES, elsewhere / "val2025")
-    write_run(cfg_path, elsewhere / "val2024", mean=10.0, std=1.0, shift=0.0)
+    cfg_path, _ = make_fake_setup(tmp_path, DATES, elsewhere / "temp" / "val2025")
+    write_run(cfg_path, elsewhere / "temp" / "val2024", mean=10.0, std=1.0, shift=0.0)
 
     run_evaluate("--config", cfg_path, "--fold", "val2025", "--output_dir", elsewhere)
     run_evaluate("--config", cfg_path, "--fold", "ensemble", "--output_dir", elsewhere)
 
-    assert (elsewhere / "val2025" / "eval_test" / "dates.npy").exists()
-    assert (elsewhere / "ensemble" / "eval_test" / "dates.npy").exists()
+    assert (elsewhere / "temp" / "val2025" / "eval_test" / "dates.npy").exists()
+    assert (elsewhere / "temp" / "ensemble" / "eval_test" / "dates.npy").exists()
     assert not (tmp_path / "run").exists()
