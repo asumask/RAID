@@ -13,6 +13,8 @@ from raid.trainer import fit
 # usage: CUDA_VISIBLE_DEVICES=1 
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2025
 #        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold val2025 --output_dir ...
+## --fold full trains the final model on split.full.train (no val; saves the last epoch as best.pt):
+#        python3 scripts/train.py --config configs/step1a_cnn.yaml --fold full
 #        python3 scripts/train.py --config configs/step1b_unet.yaml --fold val2024 --output_dir ...
 
 
@@ -23,7 +25,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=None, help="Override learning rate")
     parser.add_argument("--output_dir", type=str, default=None, help="Override output dir")
     parser.add_argument("--fold", type=str, required=True,
-                        help="CV fold name from split.folds, e.g. val2025 or val2024")    
+                        help="CV fold name from split.folds, e.g. val2025 or val2024, or 'full'")    
     
     return parser.parse_args()
 

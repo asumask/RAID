@@ -18,10 +18,9 @@ def denormalize(arr, mean, std):
 
 def build_dataloaders(cfg):
     ## normalisation stats come from this fold's training years only; val reuses them
+    ## no val years (--fold full) -> val_loader is None
     train_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.train.years,
                                        patch_size=getattr(cfg.train, "patch_size", None))
-    val_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.val.years,
-                                     stats=train_dataset.stats)
 
     out = Path(cfg.output_dir); out.mkdir(parents=True, exist_ok=True)
     np.savez(out / "norm_stats.npz",
@@ -30,7 +29,10 @@ def build_dataloaders(cfg):
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.train.batch_size, shuffle=True,
                               num_workers=cfg.train.num_workers, pin_memory=True)
+    if not cfg.split.val.years:
+        return train_loader, None
     ## validate on the full grid (deterministic, comparable across epochs); full grids only fit batch 1
+    val_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.val.years, stats=train_dataset.stats)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False,
                             num_workers=cfg.train.num_workers, pin_memory=True)
 

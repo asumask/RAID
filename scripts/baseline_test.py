@@ -23,6 +23,8 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     _, val_loader = build_dataloaders(cfg)
+    if val_loader is None:
+        parser.error(f"fold {args.fold} has no val years")
     var = cfg.data.target_vars[0]
     std = val_loader.dataset.std[var]
 

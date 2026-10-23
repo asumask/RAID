@@ -9,6 +9,8 @@
 #Results go to <run_dir>/eval_test
 ## --fold sets the run dir (<output_dir>/<fold>) and the fold's val years, for scoring CV runs:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold val2024 --split val
+## --fold full: the final model trained on split.full (test split only, it has no val years):
+#python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold full
 ## --fold ensemble averages the predictions of all fold models (test split only),
 ## results go to <output_dir>/ensemble/eval_test:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold ensemble
@@ -90,6 +92,8 @@ def main():
             apply_fold(raw, args.fold)
         elif args.split in ("train", "val"):
             parser.error(f"--split {args.split} needs --fold: train/val years come from split.folds")
+        if not raw["split"].get(args.split, {}).get("years"):
+            parser.error(f"no {args.split} years for fold {args.fold}")
         run_dirs = [Path(args.run_dir or raw["output_dir"])]
         out = run_dirs[0] / f"eval_{args.split}"
     cfg = dict_to_namespace(raw)

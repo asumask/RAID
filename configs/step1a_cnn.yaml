@@ -28,6 +28,8 @@ split:
   folds:                        # train/val years, selected with --fold; 2023 = Dec 2023 only, always in train
     val2025: {train: [2023, 2024], val: [2025]}
     val2024: {train: [2023, 2025], val: [2024]}
+  full:                         # final model on all non-test years, selected with --fold full; no val
+    train: [2023, 2024, 2025]
 
 model:
   name: cnn

@@ -31,11 +31,17 @@ def fit(model, train_loader, val_loader, cfg, device):
     best = float("inf")
     for epoch in range(cfg.train.epochs):
         tr = train_one_epoch(model, train_loader, optimizer, device)
-        va = validate(model, val_loader, device)
         lr = scheduler.get_last_lr()[0]
         scheduler.step()
+        if val_loader is None:
+            print(f"epoch {epoch}: train {tr:.4f}  lr {lr:.2e}")
+            continue
+        va = validate(model, val_loader, device)
         print(f"epoch {epoch}: train {tr:.4f}  val {va:.4f}  lr {lr:.2e}")
         if va < best:
             best = va
             torch.save(model.state_dict(), out / "best.pt")
+    if val_loader is None:
+        ## no val years (--fold full): keep the last epoch, where the cosine lr has decayed to 0
+        torch.save(model.state_dict(), out / "best.pt")
 
