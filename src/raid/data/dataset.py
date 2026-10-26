@@ -16,6 +16,7 @@ def denormalize(arr, mean, std):
     return arr * std + mean
 
 
+
 def trim_edges(mask, n):
     """Copy of a 2-D sea mask with a frame of n cells along every grid edge set to False/0.
 
