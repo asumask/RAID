@@ -6,7 +6,7 @@
 ## usage: 
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2025
 #python3 scripts/evaluate.py --config configs/step1a_cnn.yaml --run_dir experiments/step1a_cnn/val2024
-#Results go to <run_dir>/eval_test
+#Results go to <run_dir>/eval_test; monthly_metrics.csv has RMSE, bias (pred - target) and skill per month
 ## --fold sets the run dir (<output_dir>/<var>/<fold>) and the fold's val years, for scoring CV runs:
 #python3 scripts/evaluate.py --config configs/step1b_unet.yaml --fold val2024 --split val
 ## --fold full: the final model trained on split.full (test split only, it has no val years):
@@ -22,6 +22,7 @@
 #      --fold val2025 --output_dir experiments/step1b_unet/temp/
 
 import argparse
+import csv
 from pathlib import Path
 
 import numpy as np
@@ -58,6 +59,20 @@ def load_members(cfg, run_dirs, years, device):
     for run, (_, ds, _) in zip(run_dirs, members):
         assert ds.dates == dates, f"{run}: different days than {run_dirs[0]}"
     return members
+
+
+def monthly_metrics(dates, daily):
+    ## per calendar month (YYYY-MM): pooled RMSE = sqrt(mean daily MSE), bias = mean daily bias
+    months = np.array([f"{d[:4]}-{d[4:6]}" for d in dates])
+    rows = []
+    for m in dict.fromkeys(months):                                  # in date order
+        d = daily[months == m]
+        rmse_m, rmse_b = np.sqrt((d[:, :2] ** 2).mean(0))
+        rows.append({"month": m, "n_days": len(d),
+                     "rmse_model": float(rmse_m), "rmse_baseline": float(rmse_b),
+                     "bias_model": float(d[:, 2].mean()), "bias_baseline": float(d[:, 3].mean()),
+                     "skill": float(1 - rmse_m / rmse_b)})
+    return rows
 
 
 def main():
@@ -152,6 +167,16 @@ def main():
     print(f"  model    RMSE {rmse_m:.4f} degC  bias {daily[:, 2].mean():+.4f}")
     print(f"  baseline RMSE {rmse_b:.4f} degC  bias {daily[:, 3].mean():+.4f}")
     print(f"  skill vs baseline: {1 - rmse_m / rmse_b:+.1%}")
+
+    monthly = monthly_metrics(ds.dates, daily)
+    with open(out / "monthly_metrics.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(monthly[0]))
+        w.writeheader()
+        w.writerows({k: f"{v:.6f}" if isinstance(v, float) else v for k, v in r.items()} for r in monthly)
+    print(f"\n  {'month':<8} {'days':>4}  {'RMSE model':>10} {'baseline':>9}  {'bias model':>10} {'baseline':>9}  {'skill':>6}")
+    for r in monthly:
+        print(f"  {r['month']:<8} {r['n_days']:>4}  {r['rmse_model']:>10.4f} {r['rmse_baseline']:>9.4f}  "
+              f"{r['bias_model']:>+10.4f} {r['bias_baseline']:>+9.4f}  {r['skill']:>+6.1%}")
     print(f"saved to {out}")
 
 

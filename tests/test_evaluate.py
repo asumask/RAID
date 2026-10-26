@@ -2,6 +2,7 @@
 ## end-to-end smoke test of scripts/evaluate.py on a few fake days; an untrained SimpleSRCNN
 ## starts exactly at the bicubic baseline, so model and baseline RMSE must match
 
+import csv
 import subprocess
 import sys
 from pathlib import Path
@@ -71,6 +72,11 @@ def test_evaluate_runs_and_untrained_model_equals_baseline(tmp_path):
     for name in ("rmse_map_model_temp", "rmse_map_baseline_temp", "bias_map_model_temp"):
         assert np.load(out / f"{name}.npy").shape == SHAPE
     assert (out / "evaluate.log").read_text().count("model    RMSE") == 1
+    ## all days are in Jan 2026: one month whose pooled RMSE and bias equal the overall ones
+    monthly = list(csv.DictReader((out / "monthly_metrics.csv").open()))
+    assert [(r["month"], r["n_days"]) for r in monthly] == [("2026-01", str(len(DATES)))]
+    np.testing.assert_allclose(float(monthly[0]["rmse_model"]), np.sqrt((daily[:, 0] ** 2).mean()), rtol=1e-5)
+    np.testing.assert_allclose(float(monthly[0]["bias_model"]), daily[:, 2].mean(), atol=1e-6)
 
 
 def test_evaluate_fold_uses_fold_run_dir_and_val_years(tmp_path):
