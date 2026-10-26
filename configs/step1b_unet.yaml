@@ -10,8 +10,8 @@ data:
 
   processed_dir: /data/prosjekt/15915_RAID/data/processed/ #data/processed
 
-  input_vars: [salt]                    # from 800m, reprojected onto the 160m grid
-  target_vars: [salt]                   # from 160m
+  input_vars: [temp]                    # from 800m, reprojected onto the 160m grid
+  target_vars: [temp]                   # from 160m
   static_inputs: [bathymetry, land_mask, distance_to_coast]
 
   ## vertical level index into s_rho / s_w; variables not listed default to -1 (surface).
@@ -42,6 +42,6 @@ train:
   batch_size: 8
   num_workers: 4
   lr: 0.0003
-  epochs: 25
+  epochs: 20
 
 output_dir: experiments/step1b_unet
