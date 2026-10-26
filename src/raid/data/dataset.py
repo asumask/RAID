@@ -16,11 +16,28 @@ def denormalize(arr, mean, std):
     return arr * std + mean
 
 
+def trim_edges(mask, n):
+    """Copy of a 2-D sea mask with a frame of n cells along every grid edge set to False/0.
+
+    Used to keep the 160m model's open-boundary zone out of the loss; n = 0 returns an unchanged copy.
+    """
+    mask = mask.clone() if isinstance(mask, torch.Tensor) else mask.copy()
+    if n > 0:
+        mask[:n, :] = 0
+        mask[-n:, :] = 0
+        mask[:, :n] = 0
+        mask[:, -n:] = 0
+    return mask
+
+
 def build_dataloaders(cfg):
     ## normalisation stats come from this fold's training years only; val reuses them
     ## no val years (--fold full) -> val_loader is None
+    ## train.edge_pixels (default 0) drops that many cells along each grid edge from train and val loss
+    edge_pixels = getattr(cfg.train, "edge_pixels", 0)
     train_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.train.years,
-                                       patch_size=getattr(cfg.train, "patch_size", None))
+                                       patch_size=getattr(cfg.train, "patch_size", None),
+                                       edge_pixels=edge_pixels)
 
     out = Path(cfg.output_dir); out.mkdir(parents=True, exist_ok=True)
     np.savez(out / "norm_stats.npz",
@@ -32,7 +49,8 @@ def build_dataloaders(cfg):
     if not cfg.split.val.years:
         return train_loader, None
     ## validate on the full grid (deterministic, comparable across epochs); full grids only fit batch 1
-    val_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.val.years, stats=train_dataset.stats)
+    val_dataset = DownscalingDataset(cfg=cfg, years=cfg.split.val.years, stats=train_dataset.stats,
+                                     edge_pixels=edge_pixels)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False,
                             num_workers=cfg.train.num_workers, pin_memory=True)
 
@@ -61,10 +79,11 @@ class DownscalingDataset(Dataset):
     x: (len(input_vars) + len(static_inputs), H, W)  normalised 800m-on-160m inputs + static fields
     y: (len(target_vars), H, W)                       normalised 160m targets
     mask: (1, H, W)                                  1 = sea, 0 = land, for masked_mse
-    Land cells are set to 0 in x and y.
+    Land cells are set to 0 in x and y. edge_pixels > 0 also sets a frame of that many cells
+    along each grid edge to 0 in mask (inputs keep them); sea_mask itself is not trimmed.
     """
 
-    def __init__(self, cfg, years, patch_size=None, crops_per_day=20, stats=None):
+    def __init__(self, cfg, years, patch_size=None, crops_per_day=20, stats=None, edge_pixels=0):
         root = Path(cfg.data.processed_dir)
         self.dir_800m = root / "800m_on_160m_grid"
         self.dir_160m = root / "160m"
@@ -80,7 +99,7 @@ class DownscalingDataset(Dataset):
             raise RuntimeError(f"no preprocessed samples in {root} for years {years}")
 
         self.sea_mask = torch.from_numpy(np.load(static_dir / "land_mask.npy").astype(bool))
-        self.loss_mask = self.sea_mask[None].float()
+        self.loss_mask = trim_edges(self.sea_mask, edge_pixels)[None].float()
 
         if stats is None:      # training set: compute from its own dates
             stats = compute_stats(self.dates, self.dir_800m, self.dir_160m,

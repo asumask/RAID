@@ -100,8 +100,8 @@ def make_train_dataset(tmp_path):
         )
     )
 
-    def make(patch_size=None):
-        return DownscalingDataset(cfg, years=[2024], patch_size=patch_size)
+    def make(patch_size=None, edge_pixels=0):
+        return DownscalingDataset(cfg, years=[2024], patch_size=patch_size, edge_pixels=edge_pixels)
 
     return make
 
@@ -114,3 +114,39 @@ def test_crop_shapes_and_alignment(make_train_dataset):
     assert mask.shape[-2:] == (64, 64)
     # channel 0 vs target must still be a small difference, i.e. the crops are aligned
     assert (x[0] - y[0]).abs().mean() < 5.0
+
+
+## ---- edge trimming -------------------------------------------------------------------
+
+from raid.data.dataset import trim_edges
+
+
+@pytest.mark.parametrize("as_torch", [False, True])
+def test_trim_edges_zeroes_frame_only(as_torch):
+    mask = np.ones((10, 12), dtype=bool)
+    if as_torch:
+        mask = torch.from_numpy(mask)
+
+    out = trim_edges(mask, 2)
+
+    out = np.asarray(out)
+    assert not out[:2].any() and not out[-2:].any()
+    assert not out[:, :2].any() and not out[:, -2:].any()
+    assert out[2:-2, 2:-2].all()
+    assert np.asarray(mask).all()       # input left untouched
+
+
+def test_trim_edges_zero_is_a_noop():
+    mask = np.random.default_rng(0).random((8, 9)) > 0.5
+    np.testing.assert_array_equal(trim_edges(mask, 0), mask)
+
+
+def test_edge_pixels_trims_loss_mask_but_not_sea_mask(make_train_dataset):
+    plain = make_train_dataset()
+    ds = make_train_dataset(edge_pixels=5)
+
+    _, _, mask = ds[0]
+    assert torch.equal(ds.sea_mask, plain.sea_mask)
+    assert mask[0, :5].sum() == 0 and mask[0, -5:].sum() == 0
+    assert mask[0, :, :5].sum() == 0 and mask[0, :, -5:].sum() == 0
+    torch.testing.assert_close(mask[0, 5:-5, 5:-5], plain.sea_mask[5:-5, 5:-5].float())

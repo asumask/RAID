@@ -42,6 +42,7 @@ train:
   batch_size: 8
   num_workers: 4
   lr: 0.0003
+  edge_pixels: 0        # cells dropped from each grid edge in train/val loss (inputs keep them); 0 = none
   epochs: 20
 
 output_dir: experiments/step1b_unet
