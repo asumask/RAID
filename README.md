@@ -64,6 +64,18 @@ Use the built-in continuous integration in GitLab.
 - `split.test`: held-out years, never used in training/CV
 - `split.folds`: train/val years per CV fold, picked with `--fold` (required by train.py)
 
+## Edge trimming
+- `train.edge_pixels: N` in the step1 configs (default 0 = no trimming)
+- drops a frame of N cells along each grid edge from the train and val loss,
+  to keep the 160m model's open-boundary zone from driving training
+- loss mask only: inputs keep the edge cells (model still sees them as context),
+  and normalization stats still use all sea cells
+- with random patches, crops overlapping the frame just have fewer loss cells
+  (masked_mse averages over the remaining sea cells)
+- evaluation scripts (evaluate.py, evaluate_validation.py, rmse_maps.py) use the
+  untrimmed sea mask, i.e. test metrics are over the full grid
+- implemented by `trim_edges()` in `src/raid/data/dataset.py`
+
 ## Metrics
 - RMSE etc. over sea cells only, in °C
 - baseline = interpolated 800m vs 160m
